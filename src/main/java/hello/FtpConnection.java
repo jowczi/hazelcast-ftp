@@ -33,7 +33,7 @@ public class FtpConnection implements AutoCloseable {
 
     @SneakyThrows
     public List<String> listFilesNames(String directory){
-        return Arrays.asList(f.mlistDir(directory)).stream().map(FTPFile::getName).collect(Collectors.toList());
+        return Arrays.asList(f.listNames(directory));
     }
 
 

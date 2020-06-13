@@ -17,7 +17,7 @@ public class FtpSource {
     public static <T> BatchSource<T> fromDirectory(String directory, Predicate<String> fileNameFilter, ConnectionParams params, MapperFactory<T> mapperFactory){
 
         FtpFileCatalog ftpFileCatalog = new FtpFileCatalog(directory, params);
-        return Sources.batchFromProcessor("", ProcessorMetaSupplier.of(() -> new DirectoryProcessor(ftpFileCatalog, mapperFactory)) );
+        return Sources.batchFromProcessor("files in dir "+directory, ProcessorMetaSupplier.preferLocalParallelismOne(() -> new DirectoryProcessor(ftpFileCatalog, mapperFactory)) );
     }
 
 

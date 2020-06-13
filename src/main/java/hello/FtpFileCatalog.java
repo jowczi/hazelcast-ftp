@@ -28,7 +28,7 @@ public class FtpFileCatalog implements FileCatalog, Serializable {
 
     @Override
     public InputStream fileContents(String fileName) {
-        return null;
+        return connection.fileStream(directory+"/"+fileName);
     }
 
     @Override

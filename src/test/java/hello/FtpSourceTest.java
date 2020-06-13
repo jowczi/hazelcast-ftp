@@ -2,18 +2,16 @@ package hello;
 
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockftpserver.fake.FakeFtpServer;
-import org.mockftpserver.fake.UserAccount;
-import org.mockftpserver.fake.filesystem.DirectoryEntry;
-import org.mockftpserver.fake.filesystem.FileEntry;
-import org.mockftpserver.fake.filesystem.FileSystem;
-import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,33 +23,16 @@ import static org.junit.Assert.assertEquals;
 public class FtpSourceTest extends PipelineTestSupport {
 
 
-    private FakeFtpServer fakeFtpServer;
+    private TestFtpServer testFtpServer = new TestFtpServer();
 
     @Before
     public void setup() throws IOException {
-
-        fakeFtpServer = new FakeFtpServer();
-        fakeFtpServer.addUserAccount(new UserAccount("user", "password", "/dir"));
-
-        FileSystem fileSystem = new UnixFakeFileSystem();
-        fileSystem.add(new DirectoryEntry("/dir"));
-        fileSystem.add(new FileEntry("/dir/file.txt", IntStream.range(100, 500).mapToObj(i -> "line" + i + System.lineSeparator()).reduce("", String::concat)));
-
-        fileSystem.add(new DirectoryEntry("/csv"));
-        fileSystem.add(new FileEntry("/csv/file.txt", "a1,b1,c1\r\n" +
-                "a2,b2,c2"));
-
-        fakeFtpServer.setFileSystem(fileSystem);
-        fakeFtpServer.setServerControlPort(0);
-
-        fakeFtpServer.start();
-
-
+        testFtpServer.start();
     }
 
     @After
     public void teardown() throws IOException {
-        fakeFtpServer.stop();
+        testFtpServer.stop();
     }
 
     @Test
@@ -69,23 +50,25 @@ public class FtpSourceTest extends PipelineTestSupport {
     }
 
     private ConnectionParams connectionParams() {
-        return new ConnectionParams("user", "password", "localhost", fakeFtpServer.getServerControlPort());
+        return testFtpServer.connectionParams();
     }
 
     @Test
     public void shouldProcessDirectory() throws Exception {
         //given
-        BatchSource<TestType> source = FtpSource.fromDirectory("/dir", a -> true, connectionParams(), is -> new CsvInputStreamMapper<>(is, TestType.class));
+        BatchSource<TestType> source = FtpSource.fromDirectory("/csv", a -> true, connectionParams(), is -> new CsvInputStreamMapper<>(is, TestType.class));
         // when
         p.readFrom(source).writeTo(sink);
         execute();
         //then
         Map<TestType, Integer> result = sinkToBag();
-        System.out.println(result.keySet());
+        Assertions.assertThat(result.keySet()).containsOnly(new TestType("a1", "b1", "c1"));
     }
 
     @Data
-    private static class TestType {
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class TestType implements Serializable {
         private String col1, col2, col3;
     }
 }

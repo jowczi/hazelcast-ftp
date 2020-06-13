@@ -1,5 +1,5 @@
 package hello;
 
 public interface Initializable {
-    void init();
+    default void init(){}
 }
