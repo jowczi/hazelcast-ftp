@@ -48,6 +48,13 @@
             <version>1.18.12</version>
             <scope>provided</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.simpleflatmapper/sfm -->
+        <dependency>
+            <groupId>org.simpleflatmapper</groupId>
+            <artifactId>sfm</artifactId>
+            <version>2.14.1</version>
+        </dependency>
+
 
 
         <dependency>

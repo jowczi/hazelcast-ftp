@@ -2,8 +2,12 @@ package hello;
 
 import lombok.SneakyThrows;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class FtpConnection implements AutoCloseable {
 
@@ -25,6 +29,11 @@ public class FtpConnection implements AutoCloseable {
     @SneakyThrows
     public InputStream fileStream(String filePath){
         return f.retrieveFileStream(filePath);
+    }
+
+    @SneakyThrows
+    public List<String> listFilesNames(String directory){
+        return Arrays.asList(f.mlistDir(directory)).stream().map(FTPFile::getName).collect(Collectors.toList());
     }
 
 
