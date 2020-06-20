@@ -10,10 +10,11 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 import java.io.IOException;
 import java.util.stream.IntStream;
 
-public class TestFtpServer {
+public class TestFtpServer implements FtpServer {
 
     private FakeFtpServer fakeFtpServer;
 
+    @Override
     public void start() throws IOException {
 
         fakeFtpServer = new FakeFtpServer();
@@ -35,10 +36,29 @@ public class TestFtpServer {
 
     }
 
+    @Override
+    public void addFile(FileDesc fileDesc) {
+        addFile(new FileEntry(fileDesc.getPath(), fileDesc.getContents()));
+    }
+
+    public void setFileSystem(FileSystem fileSystem) {
+        fakeFtpServer.setFileSystem(fileSystem);
+    }
+
+    public void addFile(FileEntry fileEntry) {
+        fakeFtpServer.getFileSystem().add(fileEntry);
+    }
+    @Override
+    public void addDir(DirectoryEntry directoryEntry) {
+        fakeFtpServer.getFileSystem().add(directoryEntry);
+    }
+
+    @Override
     public void stop(){
         fakeFtpServer.stop();
     }
 
+    @Override
     public ConnectionParams connectionParams() {
         return new ConnectionParams("user", "password", "localhost", fakeFtpServer.getServerControlPort());
     }

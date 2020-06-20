@@ -14,8 +14,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockftpserver.fake.filesystem.DirectoryEntry;
 import org.mockftpserver.fake.filesystem.FileEntry;
-import org.sfm.csv.CsvMapper;
-import org.sfm.csv.CsvMapperFactory;
 import org.sfm.csv.CsvWriter;
 
 import java.io.*;
@@ -23,24 +21,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class FtpDirTest extends JetTestSupport {
+public class FtpDirTestWithServerHandler extends JetTestSupport {
 
-    private TestFtpServer testFtpServer = new TestFtpServer();
-
+    private FtpServer ftpServer = new TestFtpServerHandler();
 
     @Before
     public void setup() throws IOException {
-        testFtpServer.start();
+        ftpServer.start();
     }
 
     @After
     public void teardown() throws IOException {
-        testFtpServer.stop();
+        ftpServer.stop();
     }
 
     @Test
     public void name() throws Exception {
-        FtpFileCatalog ftpFileCatalog = new FtpFileCatalog("/csv", testFtpServer.connectionParams());
+        ftpServer.addFile(new FileDesc("/csv", "file1", "hello"));
+        FtpFileCatalog ftpFileCatalog = new FtpFileCatalog("/csv", ftpServer.connectionParams());
         ftpFileCatalog.init();
         System.out.println(ftpFileCatalog.listFileNames());
         System.out.println(new BufferedReader(new InputStreamReader(ftpFileCatalog.fileContents("file.txt"))).lines().collect(Collectors.toList()));
@@ -49,7 +47,9 @@ public class FtpDirTest extends JetTestSupport {
     @Test
     public void shouldProcessDirectory() throws Exception {
         //given
-        BatchSource<TestType> source = FtpSource.fromDirectory("/csv", a -> true, testFtpServer.connectionParams(), is -> new CsvInputStreamMapper<>(is, TestType.class));
+        ftpServer.addDir(new DirectoryEntry("/csv"));
+        ftpServer.addFile(new FileDesc("/csv", "file1", serialize(new TestType("a1", "b1", "c1"))));
+        BatchSource<FtpDirTest.TestType> source = FtpSource.fromDirectory("/csv", a -> true, ftpServer.connectionParams(), is -> new CsvInputStreamMapper<>(is, FtpDirTest.TestType.class));
 
         // when
         Pipeline pipeline = Pipeline.create();
@@ -57,20 +57,20 @@ public class FtpDirTest extends JetTestSupport {
         JetInstance jet = createJetMember();
         jet.newJob(pipeline).join();
         //then
-        List<TestType> result = jet.getList("output");
-        Assertions.assertThat(result).containsOnly(new TestType("a1", "b1", "c1"));
+        List<FtpDirTest.TestType> result = jet.getList("output");
+        Assertions.assertThat(result).containsOnly(new FtpDirTest.TestType("a1", "b1", "c1"));
 
     }
 
     @Test
     public void shouldProcessAllFilesOnce() throws Exception {
         //given
-        testFtpServer.addDir(new DirectoryEntry("/multiple"));
         for(int i=1; i<= 3; i++) {
-            testFtpServer.addFile(new FileEntry("/multiple/file"+i, serialize(new TestType("val1_"+i, "val2_"+i, "val3_"+i))));
+            ftpServer.addFile(new FileDesc("/multiple", "file"+i, serialize(new TestType("val1_"+i, "val2_"+i, "val3_"+i))));
         }
 
-        BatchSource<TestType> source = FtpSource.fromDirectory("/multiple", a -> true, testFtpServer.connectionParams(), is -> new CsvInputStreamMapper<>(is, TestType.class));
+
+        BatchSource<FtpDirTest.TestType> source = FtpSource.fromDirectory("/multiple", a -> true, ftpServer.connectionParams(), is -> new CsvInputStreamMapper<>(is, FtpDirTest.TestType.class));
 
         // when
         Pipeline pipeline = Pipeline.create();
@@ -78,8 +78,8 @@ public class FtpDirTest extends JetTestSupport {
         JetInstance jet = createJetMember();
         jet.newJob(pipeline).join();
         //then
-        List<TestType> result = jet.getList("output");
-        List<TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(Collectors.toList());
+        List<FtpDirTest.TestType> result = jet.getList("output");
+        List<FtpDirTest.TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new FtpDirTest.TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(Collectors.toList());
         Assertions.assertThat(result).containsAll(expected);
 
     }
@@ -94,8 +94,7 @@ public class FtpDirTest extends JetTestSupport {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class TestType implements Serializable{
+    public static class TestType implements Serializable {
         private String col1, col2, col3;
     }
-
 }

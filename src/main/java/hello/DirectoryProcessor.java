@@ -32,6 +32,7 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
 
         fileCatalog.init();
         Stream<T> stream = fileCatalog.listFileNames().stream()
+                .filter(fileName -> fileName.hashCode() % context.totalParallelism() == context.globalProcessorIndex())
                 .flatMap(fileName -> {
                     InputStream fileInputStream = fileCatalog.fileContents(fileName);
                     StatefulMapper<T> mapper = mapperFactory.apply(fileInputStream);
