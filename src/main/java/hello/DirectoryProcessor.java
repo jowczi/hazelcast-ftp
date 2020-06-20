@@ -1,9 +1,11 @@
 package hello;
 
+import com.google.common.io.Closeables;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +16,6 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
 
     private final FileCatalog fileCatalog;
     private Function<InputStream, StatefulMapper<T>> mapperFactory;
-    private transient List<StatefulMapper<T>> mappers = new ArrayList<>();
 
     private Traverser<T> trav;
 
@@ -36,8 +37,9 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
                 .flatMap(fileName -> {
                     InputStream fileInputStream = fileCatalog.fileContents(fileName);
                     StatefulMapper<T> mapper = mapperFactory.apply(fileInputStream);
-                    mappers.add(mapper);
-                    return mapper.get();
+                    return mapper.get().onClose(
+                            () -> mapper.close()
+                    );
                 });
 
 
@@ -51,6 +53,6 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        mappers.forEach(StatefulMapper::close);
+//        mappers.forEach(StatefulMapper::close);
     }
 }

@@ -1,9 +1,11 @@
 package hello;
 
 import lombok.SneakyThrows;
+import org.apache.commons.io.input.ProxyInputStream;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
@@ -28,7 +30,12 @@ public class FtpConnection implements AutoCloseable {
 
     @SneakyThrows
     public InputStream fileStream(String filePath){
-        return f.retrieveFileStream(filePath);
+        return new ProxyInputStream(f.retrieveFileStream(filePath)){
+            @Override
+            public void close() throws IOException {
+                f.completePendingCommand();
+            }
+        };
     }
 
     @SneakyThrows

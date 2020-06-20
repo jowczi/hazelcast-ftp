@@ -80,7 +80,7 @@ public class FtpDirTest extends JetTestSupport {
         //then
         List<TestType> result = jet.getList("output");
         List<TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(Collectors.toList());
-        Assertions.assertThat(result).containsAll(expected);
+        Assertions.assertThat(result).containsExactlyInAnyOrderElementsOf(expected);
 
     }
 
