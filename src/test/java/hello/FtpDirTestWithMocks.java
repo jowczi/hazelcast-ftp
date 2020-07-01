@@ -1,24 +1,21 @@
 package hello;
 
+import com.google.common.io.Closeables;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.mockftpserver.fake.filesystem.DirectoryEntry;
 import org.sfm.csv.CsvWriter;
 
 import java.io.*;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.*;
 
 public class FtpDirTestWithMocks extends JetTestSupport {
 
@@ -59,7 +56,7 @@ public class FtpDirTestWithMocks extends JetTestSupport {
         jet.newJob(pipeline).join();
         //then
         List<FtpDirTest.TestType> result = jet.getList("output");
-        List<FtpDirTest.TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new FtpDirTest.TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(Collectors.toList());
+        List<FtpDirTest.TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new FtpDirTest.TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(toList());
         Assertions.assertThat(result).containsExactlyElementsOf(expected);
 
     }
@@ -81,8 +78,37 @@ public class FtpDirTestWithMocks extends JetTestSupport {
         jets[0].newJob(pipeline).join();
         //then
         List<FtpDirTest.TestType> result = jets[0].getList("output");
-        List<FtpDirTest.TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new FtpDirTest.TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(Collectors.toList());
-        Assertions.assertThat(result).containsExactlyElementsOf(expected);
+        List<FtpDirTest.TestType> expected = IntStream.rangeClosed(1, 3).mapToObj(i -> new FtpDirTest.TestType("val1_" + i, "val2_" + i, "val3_" + i)).collect(toList());
+        Assertions.assertThat(result).containsAll(expected);
+
+    }
+
+    @Test
+    public void shouldFilterFiles() throws Exception {
+        //given
+        for(int i=1; i<= 10; i++) {
+            ftpServer.addFile(new FileDesc("/multiple", "file"+i, "line"+i));
+        }
+        for(int i=1; i<= 10; i++) {
+            ftpServer.addFile(new FileDesc("/multiple", "ignored"+i, "ignored"+i));
+        }
+
+        MapperFactory<String> linesInFile = (is) -> {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            return () -> reader.lines().onClose(() -> Closeables.closeQuietly(reader));
+        };
+
+        BatchSource<String> source = FtpSource.fromDirectory("/multiple", ftpServer.getCatalog("/multiple"), fileName -> fileName.startsWith("file"), linesInFile);
+
+        // when
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source).writeTo(Sinks.list("output"));
+        JetInstance jet = createJetMember();
+        jet.newJob(pipeline).join();
+        //then
+        List<String> result = jet.getList("output");
+        List<String> expected = IntStream.rangeClosed(1, 10).mapToObj(i -> "line"+i).collect(toList());
+        Assertions.assertThat(result).containsAll(expected);
 
     }
 

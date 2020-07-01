@@ -1,5 +1,6 @@
 package hello;
 
+import com.google.common.io.Closeables;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -31,7 +32,7 @@ public class FtpFileProcessor extends AbstractProcessor {
         InputStream fileStream = connection.fileStream(filePath);
 
         reader = new BufferedReader(new InputStreamReader(fileStream, Charset.forName("UTF-8")));
-        this.trav = Traversers.traverseStream(reader.lines());
+        this.trav = Traversers.traverseStream(reader.lines().onClose(() -> Closeables.closeQuietly(reader)));
     }
 
     @Override

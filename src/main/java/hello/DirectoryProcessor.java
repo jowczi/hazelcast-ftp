@@ -5,24 +5,23 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 
-import java.io.Closeable;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class DirectoryProcessor<T> extends AbstractProcessor {
 
     private final FileCatalog fileCatalog;
     private Function<InputStream, StatefulMapper<T>> mapperFactory;
+    private Predicate<String> fileNameFilter;
 
     private Traverser<T> trav;
 
-    public DirectoryProcessor(FileCatalog fileCatalog, MapperFactory<T> mapperFactory) {
+    public DirectoryProcessor(FileCatalog fileCatalog, MapperFactory<T> mapperFactory, Predicate<String> fileNameFilter) {
         this.fileCatalog = fileCatalog;
         this.mapperFactory = mapperFactory;
-
+        this.fileNameFilter = fileNameFilter;
     }
 
     @Override
@@ -33,6 +32,7 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
 
         fileCatalog.init();
         Stream<T> stream = fileCatalog.listFileNames().stream()
+                .filter(fileNameFilter)
                 .filter(fileName -> fileName.hashCode() % context.totalParallelism() == context.globalProcessorIndex())
                 .flatMap(fileName -> {
                     InputStream fileInputStream = fileCatalog.fileContents(fileName);

@@ -10,6 +10,7 @@ public class FtpConnectionSessionTest {
 
     @Test
     public void testMultipleTransfers() throws Exception {
+        //https://stackoverflow.com/questions/13191052/can-ftp-have-multiple-tcp-connection-for-multiple-parallel-file-transfer
         FtpServer ftpServer = new TestFtpServerHandler();
         ftpServer.start();
         ftpServer.addFile(new FileDesc("/dir", "file1", "hello"));
