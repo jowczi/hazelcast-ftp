@@ -1,6 +1,5 @@
 package hello;
 
-import com.google.common.io.Closeables;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -9,6 +8,8 @@ import java.io.InputStream;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import static java.lang.Math.abs;
 
 public class DirectoryProcessor<T> extends AbstractProcessor {
 
@@ -33,7 +34,7 @@ public class DirectoryProcessor<T> extends AbstractProcessor {
         fileCatalog.init();
         Stream<T> stream = fileCatalog.listFileNames().stream()
                 .filter(fileNameFilter)
-                .filter(fileName -> fileName.hashCode() % context.totalParallelism() == context.globalProcessorIndex())
+                .filter(fileName -> abs(fileName.hashCode()) % context.totalParallelism() == context.globalProcessorIndex())
                 .flatMap(fileName -> {
                     InputStream fileInputStream = fileCatalog.fileContents(fileName);
                     StatefulMapper<T> mapper = mapperFactory.apply(fileInputStream);

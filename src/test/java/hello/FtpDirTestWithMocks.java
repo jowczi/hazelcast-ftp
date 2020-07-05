@@ -86,7 +86,7 @@ public class FtpDirTestWithMocks extends JetTestSupport {
     @Test
     public void shouldFilterFiles() throws Exception {
         //given
-        for(int i=1; i<= 10; i++) {
+        for(int i=1; i<= 100; i++) {
             ftpServer.addFile(new FileDesc("/multiple", "file"+i, "line"+i));
         }
         for(int i=1; i<= 10; i++) {
@@ -107,7 +107,7 @@ public class FtpDirTestWithMocks extends JetTestSupport {
         jet.newJob(pipeline).join();
         //then
         List<String> result = jet.getList("output");
-        List<String> expected = IntStream.rangeClosed(1, 10).mapToObj(i -> "line"+i).collect(toList());
+        List<String> expected = IntStream.rangeClosed(1, 100).mapToObj(i -> "line"+i).collect(toList());
         Assertions.assertThat(result).containsAll(expected);
 
     }
